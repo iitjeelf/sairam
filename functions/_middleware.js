@@ -1,10 +1,15 @@
 export async function onRequest(context) {
     const { request, next } = context;
-    
+    const url = new URL(request.url);
     const userAgent = request.headers.get('User-Agent') || '';
     const referer = request.headers.get('Referer');
     
-    // Detect suspicious access (view-source, bots, direct URL)
+    // ALWAYS allow the entry page to show normally
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+        return next();
+    }
+    
+    // For all other paths, check for suspicious access
     const isSuspicious = 
         !referer ||  // Direct URL access or view-source
         userAgent.includes('curl') ||
@@ -12,7 +17,7 @@ export async function onRequest(context) {
         userAgent.includes('wget') ||
         userAgent.includes('bot');
     
-    // FAKE CONTENT - what view-source shows
+    // FAKE CONTENT for suspicious visitors
     if (isSuspicious) {
         return new Response(`<!DOCTYPE html>
 <html>
@@ -54,10 +59,6 @@ export async function onRequest(context) {
             <small>If you are a student, please contact your instructor.</small>
         </div>
     </div>
-    <script>
-        console.log("This is a decoy page - no real exam code here");
-        // No real exam logic in this file
-    </script>
 </body>
 </html>`, {
             headers: { 
@@ -67,6 +68,6 @@ export async function onRequest(context) {
         });
     }
     
-    // REAL CONTENT - normal visitors get your actual exam
+    // REAL CONTENT for normal visitors
     return next();
 }
