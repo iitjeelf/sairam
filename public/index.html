@@ -1,10 +1,120 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Real Exam</title>
+    <title>Real Exam - Secure</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .question { margin: 20px 0; padding: 15px; border: 1px solid #007bff; border-radius: 5px; }
+        input { padding: 8px; width: 100%; margin-top: 10px; box-sizing: border-box; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        .warning { color: red; font-size: 12px; margin-top: 20px; text-align: center; }
+        .header { background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+    </style>
 </head>
 <body>
-    <h1>Your Real Exam Content</h1>
-    <p>This is only visible to normal visitors</p>
+    <div class="header">
+        <h1>📝 Online Examination</h1>
+        <p>Please answer all questions carefully.</p>
+    </div>
+    
+    <div id="exam">
+        <div class="question">
+            <strong>Question 1:</strong> What is 2 + 2?
+            <input type="text" id="q1" placeholder="Enter your answer">
+        </div>
+        
+        <div class="question">
+            <strong>Question 2:</strong> What is the capital of France?
+            <input type="text" id="q2" placeholder="Enter your answer">
+        </div>
+        
+        <div class="question">
+            <strong>Question 3:</strong> What is the chemical symbol for water?
+            <input type="text" id="q3" placeholder="Enter your answer">
+        </div>
+        
+        <button onclick="submitExam()">Submit Exam</button>
+        <div id="result" style="margin-top: 20px;"></div>
+    </div>
+    
+    <div class="warning">
+        ⚠️ Do not close this window or refresh during the exam
+    </div>
+    
+    <script>
+        // ANTI-DEVTOOLS PROTECTION
+        (function() {
+            let terminated = false;
+            
+            setInterval(function() {
+                if (terminated) return;
+                
+                const start = performance.now();
+                debugger;
+                const end = performance.now();
+                
+                if (end - start > 100) {
+                    terminated = true;
+                    document.body.innerHTML = `
+                        <div style="text-align: center; padding: 50px;">
+                            <h1 style="color: red;">⚠️ EXAM TERMINATED ⚠️</h1>
+                            <p>Developer tools detected. Your attempt has been logged.</p>
+                            <p>Please contact your instructor.</p>
+                        </div>
+                    `;
+                }
+            }, 1000);
+        })();
+        
+        // BLOCK KEYBOARD SHORTCUTS
+        document.addEventListener('keydown', function(e) {
+            // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+                (e.ctrlKey && e.key === 'U')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        // BLOCK RIGHT-CLICK
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // EXAM SUBMISSION
+        function submitExam() {
+            const q1 = document.getElementById('q1').value.trim();
+            const q2 = document.getElementById('q2').value.trim();
+            const q3 = document.getElementById('q3').value.trim();
+            
+            if (!q1 || !q2 || !q3) {
+                alert('⚠️ Please answer all questions before submitting');
+                return;
+            }
+            
+            // Check answers
+            let score = 0;
+            if (q1 === '4') score++;
+            if (q2.toLowerCase() === 'paris') score++;
+            if (q3.toLowerCase() === 'h2o') score++;
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div style="padding: 15px; background: #d4edda; border-radius: 5px;">
+                    <strong>Exam Submitted!</strong><br>
+                    Your score: ${score}/3<br>
+                    ${score === 3 ? '🎉 Perfect score! Well done!' : '📚 Review your answers and try again.'}
+                </div>
+            `;
+            
+            // Disable submit button
+            document.querySelector('button').disabled = true;
+        }
+        
+        console.log("Exam loaded successfully");
+    </script>
 </body>
 </html>
