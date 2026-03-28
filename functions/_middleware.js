@@ -1,61 +1,72 @@
 export async function onRequest(context) {
     const { request, next } = context;
     
-    const url = new URL(request.url);
     const userAgent = request.headers.get('User-Agent') || '';
     const referer = request.headers.get('Referer');
     
     // Detect suspicious access (view-source, bots, direct URL)
     const isSuspicious = 
-        !referer ||  // Typing URL directly or view-source
+        !referer ||  // Direct URL access or view-source
         userAgent.includes('curl') ||
         userAgent.includes('python') ||
         userAgent.includes('wget') ||
-        userAgent.includes('bot') ||
-        url.searchParams.has('source');
+        userAgent.includes('bot');
     
     // FAKE CONTENT - what view-source shows
     if (isSuspicious) {
         return new Response(`<!DOCTYPE html>
 <html>
 <head>
-    <title>Exam Portal</title>
+    <title>LFJC Exam Portal</title>
     <style>
-        body { font-family: monospace; padding: 40px; background: #f5f5f5; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .fake { color: #666; }
+        body {
+            font-family: monospace;
+            padding: 40px;
+            background: #f5f5f5;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #4B0082;
+        }
+        .fake {
+            color: #666;
+            margin-top: 20px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📚 Secure Exam Environment</h1>
-        <p>This exam is protected.</p>
+        <h1>🔒 LFJC Online Examination</h1>
+        <p>This is a secure exam environment.</p>
         <div class="fake">
             <hr>
             <small>Access restricted to authorized users only.</small>
+            <br>
+            <small>If you are a student, please contact your instructor.</small>
         </div>
     </div>
-    
     <script>
-        // This is DECOY code - not the real exam
-        console.log("Protected environment");
-        
-        function validateAccess() {
-            return false;
-        }
-        
-        // No real exam logic here
-        const fakeQuestions = ["Sample Q1", "Sample Q2"];
+        console.log("This is a decoy page - no real exam code here");
+        // No real exam logic in this file
     </script>
 </body>
 </html>`, {
-            headers: {
+            headers: { 
                 'Content-Type': 'text/html',
                 'Cache-Control': 'no-store'
             }
         });
     }
     
-    // REAL CONTENT - normal visitors get this
+    // REAL CONTENT - normal visitors get your actual exam
     return next();
 }
