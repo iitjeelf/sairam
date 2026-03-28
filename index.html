@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Secure Exam - Full Screen Required</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        /* Main exam content */
+        .exam-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .exam-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #4B0082;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: inline-block;
+            width: 150px;
+            font-weight: bold;
+            color: #4B0082;
+        }
+        
+        .form-group input {
+            padding: 10px;
+            border: 2px solid #4B0082;
+            border-radius: 8px;
+            width: 250px;
+            font-size: 16px;
+        }
+        
+        .question {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 5px solid #4B0082;
+        }
+        
+        .question h3 {
+            color: #4B0082;
+            margin-bottom: 15px;
+        }
+        
+        .optBtn {
+            background: white;
+            border: 2px solid #4B0082;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+        
+        .optBtn:hover {
+            background: #4B0082;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .optBtn.selected {
+            background: #4B0082;
+            color: white;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .nav-btn {
+            background: #4B0082;
+            color: white;
+            margin: 10px;
+        }
+        
+        .submit-btn {
+            background: #dc3545;
+            color: white;
+        }
+        
+        /* BLUR OVERLAY - covers EVERYTHING including browser UI */
+        #security-overlay {
+            position: fixed;
+            top: -100px;
+            left: -100px;
+            right: -100px;
+            bottom: -100px;
+            width: calc(100% + 200px);
+            height: calc(100% + 200px);
+            background: rgba(0, 0, 0, 0.98);
+            backdrop-filter: blur(50px);
+            -webkit-backdrop-filter: blur(50px);
+            z-index: 2147483647;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .overlay-content {
+            background: rgba(255, 0, 0, 0.2);
+            backdrop-filter: blur(20px);
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            border: 3px solid rgba(255, 0, 0, 0.8);
+            max-width: 500px;
+            animation: shake 0.5s ease;
+        }
+        
+        .overlay-content h2 {
+            font-size: 36px;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+        }
+        
+        .overlay-content p {
+            font-size: 18px;
+            color: white;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+        
+        .overlay-content .count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+        
+        .reenter-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .reenter-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .status-bar {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 9999;
+        }
+        
+        .fullscreen-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4B0082;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+
+<div id="security-overlay">
+    <div class="overlay-content">
+        <h2>⚠️ SECURITY VIOLATION</h2>
+        <p>You have exited <strong>full-screen mode</strong>!</p>
+        <p>Full-screen is <strong>MANDATORY</strong> to continue the exam.</p>
+        <p class="count">Violation: <span id="violation-counter">1</span>/3</p>
+        <p style="font-size: 14px; color: #ff9999;">After 3 violations, exam will be auto-submitted!</p>
+        <button class="reenter-btn" id="reenter-fullscreen">🔒 ENTER FULL-SCREEN MODE</button>
+    </div>
+</div>
+
+<div class="fullscreen-indicator" id="fsIndicator">🔓 Not in Full Screen</div>
+<div class="status-bar" id="statusBar">✅ Exam Active</div>
+
+<div class="exam-container">
+    <div class="exam-card">
+        <h1>📝 LFJC ONLINE EXAMINATION</h1>
+        
+        <div class="form-group">
+            <label>NAME:</label>
+            <input type="text" id="stuName" placeholder="Enter your name">
+        </div>
+        
+        <div class="form-group">
+            <label>SECTION:</label>
+            <input type="text" id="stuSection" placeholder="Enter section">
+        </div>
+        
+        <div class="form-group">
+            <label>ROLL NUMBER:</label>
+            <input type="text" id="stuRoll" placeholder="Enter roll number">
+        </div>
+        
+        <div class="question">
+            <h3>Question 1</h3>
+            <p>What is the capital of France?</p>
+            <button class="optBtn" data-opt="A">A) London</button>
+            <button class="optBtn" data-opt="B">B) Berlin</button>
+            <button class="optBtn" data-opt="C">C) Paris</button>
+            <button class="optBtn" data-opt="D">D) Madrid</button>
+        </div>
+        
+        <div class="question">
+            <h3>Question 2</h3>
+            <p>What is 2 + 2?</p>
+            <button class="optBtn" data-opt="A">A) 3</button>
+            <button class="optBtn" data-opt="B">B) 4</button>
+            <button class="optBtn" data-opt="C">C) 5</button>
+            <button class="optBtn" data-opt="D">D) 6</button>
+        </div>
+        
+        <div class="question">
+            <h3>Question 3</h3>
+            <p>Who painted the Mona Lisa?</p>
+            <button class="optBtn" data-opt="A">A) Van Gogh</button>
+            <button class="optBtn" data-opt="B">B) Picasso</button>
+            <button class="optBtn" data-opt="C">C) Da Vinci</button>
+            <button class="optBtn" data-opt="D">D) Rembrandt</button>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="nav-btn" id="submitBtn">📤 SUBMIT EXAM</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Security Variables
+    let fullScreenViolations = 0;
+    const MAX_VIOLATIONS = 3;
+    let examActive = true;
+    let isFullScreen = false;
+    
+    // Get elements
+    const overlay = document.getElementById('security-overlay');
+    const violationCounter = document.getElementById('violation-counter');
+    const fsIndicator = document.getElementById('fsIndicator');
+    const statusBar = document.getElementById('statusBar');
+    const reenterBtn = document.getElementById('reenter-fullscreen');
+    
+    // Function to enter full-screen
+    async function enterFullScreen() {
+        try {
+            const elem = document.documentElement;
+            
+            if (elem.requestFullscreen) {
+                await elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                await elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                await elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+                await elem.msRequestFullscreen();
+            }
+            
+            isFullScreen = true;
+            fsIndicator.innerHTML = '🔒 Full Screen Active';
+            fsIndicator.style.background = '#28a745';
+            overlay.style.display = 'none';
+            
+            console.log('✅ Full-screen mode activated');
+            
+        } catch (err) {
+            console.error('Failed to enter full-screen:', err);
+            showWarning('Please allow full-screen mode to continue');
+        }
+    }
+    
+    // Function to exit full-screen
+    function exitFullScreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+    
+    // Handle violation when exiting full-screen
+    function handleViolation() {
+        if (!examActive) return;
+        
+        fullScreenViolations++;
+        violationCounter.textContent = fullScreenViolations;
+        
+        console.log(`⚠️ Full-screen violation #${fullScreenViolations}`);
+        
+        // Show blur overlay
+        overlay.style.display = 'flex';
+        
+        // Update status
+        statusBar.innerHTML = `⚠️ Violation ${fullScreenViolations}/${MAX_VIOLATIONS}`;
+        statusBar.style.background = '#dc3545';
+        
+        // Check if max violations reached
+        if (fullScreenViolations >= MAX_VIOLATIONS) {
+            statusBar.innerHTML = '🚨 EXAM AUTO-SUBMITTED!';
+            examActive = false;
+            
+            // Auto-submit after 3 seconds
+            setTimeout(() => {
+                alert('Exam auto-submitted due to security violations!');
+                submitExam();
+            }, 3000);
+        }
+    }
+    
+    // Listen for full-screen change events
+    document.addEventListener('fullscreenchange', checkFullScreen);
+    document.addEventListener('webkitfullscreenchange', checkFullScreen);
+    document.addEventListener('mozfullscreenchange', checkFullScreen);
+    document.addEventListener('MSFullscreenChange', checkFullScreen);
+    
+    function checkFullScreen() {
+        const isCurrentlyFullScreen = !!(document.fullscreenElement || 
+                                         document.webkitFullscreenElement || 
+                                         document.mozFullScreenElement || 
+                                         document.msFullscreenElement);
+        
+        if (!isCurrentlyFullScreen && isFullScreen && examActive) {
+            // User exited full-screen - VIOLATION!
+            isFullScreen = false;
+            handleViolation();
+            fsIndicator.innerHTML = '🔓 Not in Full Screen';
+            fsIndicator.style.background = '#dc3545';
+        } else if (isCurrentlyFullScreen) {
+            // User entered full-screen
+            isFullScreen = true;
+            fsIndicator.innerHTML = '🔒 Full Screen Active';
+            fsIndicator.style.background = '#28a745';
+            overlay.style.display = 'none';
+            statusBar.innerHTML = '✅ Exam Active';
+            statusBar.style.background = 'rgba(0,0,0,0.7)';
+        }
+    }
+    
+    // Re-enter full-screen button
+    reenterBtn.onclick = async () => {
+        await enterFullScreen();
+    };
+    
+    // Prevent Escape key from exiting full-screen
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && examActive) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔒 Escape key blocked');
+            return false;
+        }
+        
+        // Block F11
+        if (e.key === 'F11') {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+        
+        // Block Print Screen
+        if (e.key === 'PrintScreen') {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    });
+    
+    // Block right-click
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+    });
+    
+    // Block keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Block Ctrl+Shift+I (DevTools)
+        if ((e.ctrlKey && e.shiftKey && e.key === 'I') ||
+            (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+            (e.ctrlKey && e.key === 'U') ||
+            (e.ctrlKey && e.key === 'S') ||
+            (e.ctrlKey && e.key === 'P')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    });
+    
+    // Tab switch detection
+    let tabSwitchCount = 0;
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden && examActive && isFullScreen) {
+            tabSwitchCount++;
+            console.log(`⚠️ Tab switch #${tabSwitchCount}`);
+            
+            if (tabSwitchCount >= 3) {
+                alert('Exam auto-submitted due to tab switching!');
+                submitExam();
+            } else {
+                showTempWarning(`⚠️ Tab switching detected! (${tabSwitchCount}/3)`);
+            }
+        }
+    });
+    
+    function showTempWarning(message) {
+        const warning = document.createElement('div');
+        warning.textContent = message;
+        warning.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: #ff6b6b;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            z-index: 2147483647;
+            border: 2px solid red;
+            text-align: center;
+            white-space: nowrap;
+        `;
+        document.body.appendChild(warning);
+        setTimeout(() => warning.remove(), 2000);
+    }
+    
+    // Auto start full-screen on page load
+    window.addEventListener('load', async () => {
+        console.log('Page loaded, requesting full-screen...');
+        await enterFullScreen();
+    });
+    
+    // Re-request full-screen if page becomes visible
+    document.addEventListener('visibilitychange', async () => {
+        if (!document.hidden && !isFullScreen && examActive) {
+            await enterFullScreen();
+        }
+    });
+    
+    // Sample exam functions
+    document.querySelectorAll('.optBtn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.optBtn').forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            console.log('Selected:', this.textContent);
+        });
+    });
+    
+    function submitExam() {
+        if (!examActive) return;
+        examActive = false;
+        alert('Exam submitted successfully!');
+        exitFullScreen();
+        location.reload();
+    }
+    
+    document.getElementById('submitBtn').onclick = () => {
+        if (confirm('Submit exam?')) {
+            submitExam();
+        }
+    };
+    
+    console.log('✅ Security system active');
+    console.log('⚠️ Full-screen is MANDATORY - exiting will show blur overlay');
+</script>
+</body>
+</html>
