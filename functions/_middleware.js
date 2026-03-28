@@ -1,73 +1,31 @@
 export async function onRequest(context) {
     const { request, next } = context;
     const url = new URL(request.url);
-    const userAgent = request.headers.get('User-Agent') || '';
     const referer = request.headers.get('Referer');
     
-    // ALWAYS allow the entry page to show normally
-    if (url.pathname === '/' || url.pathname === '/index.html') {
+    // Allow your mask worker to access
+    if (referer && referer.includes('workers.dev')) {
         return next();
     }
     
-    // For all other paths, check for suspicious access
-    const isSuspicious = 
-        !referer ||  // Direct URL access or view-source
-        userAgent.includes('curl') ||
-        userAgent.includes('python') ||
-        userAgent.includes('wget') ||
-        userAgent.includes('bot');
+    // Allow images and assets
+    if (url.pathname.match(/\.(png|jpg|jpeg|gif|css|js|ico|svg)$/i)) {
+        return next();
+    }
     
-    // FAKE CONTENT for suspicious visitors
-    if (isSuspicious) {
+    // Block suspicious access (view-source, direct URL)
+    if (!referer) {
         return new Response(`<!DOCTYPE html>
 <html>
-<head>
-    <title>LFJC Exam Portal</title>
-    <style>
-        body {
-            font-family: monospace;
-            padding: 40px;
-            background: #f5f5f5;
-            text-align: center;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #4B0082;
-        }
-        .fake {
-            color: #666;
-            margin-top: 20px;
-            font-size: 12px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🔒 LFJC Online Examination</h1>
-        <p>This is a secure exam environment.</p>
-        <div class="fake">
-            <hr>
-            <small>Access restricted to authorized users only.</small>
-            <br>
-            <small>If you are a student, please contact your instructor.</small>
-        </div>
-    </div>
+<head><title>Access Restricted</title></head>
+<body style="text-align:center; padding:50px;">
+    <h1>🔒 Access Restricted</h1>
+    <p>Please use the official exam link.</p>
 </body>
 </html>`, {
-            headers: { 
-                'Content-Type': 'text/html',
-                'Cache-Control': 'no-store'
-            }
+            headers: { 'Content-Type': 'text/html' }
         });
     }
     
-    // REAL CONTENT for normal visitors
     return next();
 }
