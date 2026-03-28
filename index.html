@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>LFJC Secure Exam</title>
+    <title>LFJC Secure Exam - Force Full-Screen</title>
     <style>
         * {
             margin: 0;
@@ -22,6 +22,7 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            transition: all 0.3s ease;
         }
         
         .exam-card {
@@ -89,28 +90,53 @@
             color: white;
         }
         
-        .nav-btn, .submit-btn {
+        .submit-btn {
             padding: 12px 24px;
             font-size: 16px;
             font-weight: bold;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            margin: 10px;
-        }
-        
-        .nav-btn {
-            background: #4B0082;
-            color: white;
-        }
-        
-        .submit-btn {
             background: #dc3545;
             color: white;
         }
         
-        /* Full-screen warning overlay */
-        #fullscreen-warning {
+        /* HALF BLANK OVERLAY - FROM TOP ONLY */
+        .half-blank-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(15px);
+            z-index: 999998;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            animation: slideDown 0.3s ease;
+        }
+        
+        .half-blank-content {
+            text-align: center;
+            color: white;
+            padding: 20px;
+        }
+        
+        .half-blank-content h2 {
+            color: #ff4444;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .half-blank-content p {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        
+        /* FULL OVERLAY - When user ignores half overlay */
+        .full-overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -119,7 +145,7 @@
             background: rgba(0, 0, 0, 0.98);
             backdrop-filter: blur(20px);
             z-index: 999999;
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             flex-direction: column;
@@ -130,14 +156,14 @@
             background: rgba(255, 0, 0, 0.2);
             border: 3px solid #ff4444;
             border-radius: 20px;
-            padding: 50px;
+            padding: 40px;
             max-width: 500px;
             animation: pulse 1s infinite;
         }
         
         .warning-card h1 {
             color: #ff4444;
-            font-size: 36px;
+            font-size: 32px;
             margin-bottom: 20px;
         }
         
@@ -145,7 +171,6 @@
             color: white;
             font-size: 18px;
             margin: 15px 0;
-            line-height: 1.6;
         }
         
         .warning-card button {
@@ -160,9 +185,9 @@
             font-weight: bold;
         }
         
-        .warning-card .close-btn {
-            background: #ff4444;
-            margin-top: 10px;
+        @keyframes slideDown {
+            from { top: -50%; }
+            to { top: 0; }
         }
         
         @keyframes pulse {
@@ -174,25 +199,49 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.7);
+            background: #28a745;
             color: white;
             padding: 5px 10px;
             border-radius: 5px;
             font-size: 12px;
             z-index: 99999;
         }
+        
+        .status.warning {
+            background: #ff4444;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Blur the exam content when half overlay shows */
+        .exam-blurred {
+            filter: blur(5px);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-<div id="fullscreen-warning" style="display: none;">
+<!-- HALF BLANK OVERLAY (from top only) -->
+<div class="half-blank-overlay" id="halfBlankOverlay">
+    <div class="half-blank-content">
+        <h2>⚠️ FULL-SCREEN EXITED!</h2>
+        <p>Restoring full-screen in <span id="countdownTimer">3</span> seconds...</p>
+        <p style="font-size: 12px; margin-top: 10px;">Press any key to restore immediately</p>
+    </div>
+</div>
+
+<!-- FULL OVERLAY (if user ignores half overlay) -->
+<div class="full-overlay" id="fullOverlay">
     <div class="warning-card">
-        <h1>⚠️ FULL-SCREEN REQUIRED</h1>
-        <p>This exam requires <strong>FULL-SCREEN MODE</strong> to continue.</p>
-        <p>Please click the button below to enter full-screen mode.</p>
-        <button id="enter-fullscreen-btn">🔒 ENTER FULL-SCREEN</button>
-        <br>
-        <button id="close-exam-btn" class="close-btn">❌ CLOSE EXAM</button>
+        <h1>⚠️ SECURITY VIOLATION</h1>
+        <p>You have exited full-screen mode multiple times!</p>
+        <p><strong>Full-screen is MANDATORY</strong> for this exam.</p>
+        <button id="forceFullscreenBtn">🔒 CLICK TO RESTORE FULL-SCREEN</button>
     </div>
 </div>
 
@@ -251,18 +300,20 @@
 </div>
 
 <script>
-    let isFullScreen = false;
     let examStarted = false;
-    let checkInterval = null;
+    let exitCount = 0;
+    let countdownInterval = null;
+    let restoreInterval = null;
     
-    const warningDiv = document.getElementById('fullscreen-warning');
-    const examContent = document.getElementById('examContent');
+    const halfOverlay = document.getElementById('halfBlankOverlay');
+    const fullOverlay = document.getElementById('fullOverlay');
     const statusDiv = document.getElementById('status');
-    const enterBtn = document.getElementById('enter-fullscreen-btn');
-    const closeBtn = document.getElementById('close-exam-btn');
+    const examContentDiv = document.getElementById('examContent');
+    const countdownSpan = document.getElementById('countdownTimer');
+    const forceBtn = document.getElementById('forceFullscreenBtn');
     
-    // Function to enter full-screen
-    async function enterFullScreen() {
+    // Force full-screen function
+    async function forceFullScreen() {
         try {
             const elem = document.documentElement;
             
@@ -276,81 +327,128 @@
                 await elem.msRequestFullscreen();
             }
             
-            isFullScreen = true;
-            warningDiv.style.display = 'none';
-            examContent.style.display = 'block';
-            statusDiv.innerHTML = '🔒 Full-screen Active';
-            statusDiv.style.background = '#28a745';
+            setTimeout(() => {
+                if (isInFullScreen()) {
+                    console.log('✅ Full-screen restored');
+                    hideAllOverlays();
+                    exitCount = 0;
+                }
+            }, 300);
             
-            console.log('✅ Full-screen mode activated');
-            
+            return true;
         } catch (err) {
-            console.error('Failed to enter full-screen:', err);
-            alert('Please allow full-screen mode to take the exam');
+            console.error('Full-screen error:', err);
+            return false;
         }
     }
     
-    // Function to exit full-screen
-    function exitFullScreen() {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-            document.mozCancelFullScreen();
-        } else if (document.msExitFullscreen) {
-            document.msExitFullscreen();
+    // Check if currently in full-screen
+    function isInFullScreen() {
+        return !!(document.fullscreenElement || 
+                  document.webkitFullscreenElement || 
+                  document.mozFullScreenElement || 
+                  document.msFullscreenElement);
+    }
+    
+    // Hide all overlays
+    function hideAllOverlays() {
+        halfOverlay.style.display = 'none';
+        fullOverlay.style.display = 'none';
+        examContentDiv.classList.remove('exam-blurred');
+        statusDiv.innerHTML = '🔒 Full-screen Active';
+        statusDiv.classList.remove('warning');
+        
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+        if (restoreInterval) {
+            clearInterval(restoreInterval);
+            restoreInterval = null;
         }
     }
     
-    // Function to close/kill the exam page
-    function closeExam() {
-        // Method 1: Clear everything and show message
-        document.body.innerHTML = `
-            <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                        background: black; color: white; display: flex; justify-content: center; 
-                        align-items: center; flex-direction: column; z-index: 999999; text-align: center;">
-                <h1 style="color: red;">🚫 EXAM TERMINATED</h1>
-                <p style="font-size: 18px; margin: 20px;">You exited full-screen mode.</p>
-                <p>Exam has been closed for security reasons.</p>
-                <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">
-                    Restart Exam
-                </button>
-            </div>
-        `;
+    // Show half blank overlay (from top only)
+    function showHalfBlankOverlay() {
+        halfOverlay.style.display = 'flex';
+        examContentDiv.classList.add('exam-blurred');
+        statusDiv.innerHTML = '⚠️ Restoring Full-screen...';
+        statusDiv.classList.add('warning');
         
-        // Method 2: Redirect to blank page
-        // window.location.href = 'about:blank';
+        let countdown = 3;
+        countdownSpan.textContent = countdown;
         
-        // Method 3: Close window (may not work in all browsers)
-        // window.close();
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            countdown--;
+            countdownSpan.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                // Try to force full-screen
+                forceFullScreen().then(() => {
+                    setTimeout(() => {
+                        if (!isInFullScreen()) {
+                            // If still not in full-screen, show full overlay
+                            showFullOverlay();
+                        }
+                    }, 1000);
+                });
+            }
+        }, 1000);
         
-        console.log('❌ Exam closed - full-screen violation');
+        // Also try to restore immediately
+        setTimeout(() => forceFullScreen(), 100);
     }
     
-    // Check full-screen status
-    function checkFullScreen() {
-        const isCurrentlyFullScreen = !!(document.fullscreenElement || 
-                                         document.webkitFullscreenElement || 
-                                         document.mozFullScreenElement || 
-                                         document.msFullscreenElement);
+    // Show full overlay (after multiple violations)
+    function showFullOverlay() {
+        halfOverlay.style.display = 'none';
+        fullOverlay.style.display = 'flex';
+        examContentDiv.classList.add('exam-blurred');
+        statusDiv.innerHTML = '🚨 Full-screen Required!';
+    }
+    
+    // Handle full-screen exit
+    function handleFullScreenExit() {
+        if (!examStarted) return;
         
-        if (!isCurrentlyFullScreen && examStarted) {
-            // User exited full-screen - CLOSE EXAM IMMEDIATELY
-            console.log('⚠️ Full-screen exited! Closing exam...');
-            closeExam();
-        } else if (isCurrentlyFullScreen && examStarted) {
-            isFullScreen = true;
-            statusDiv.innerHTML = '🔒 Full-screen Active';
-            statusDiv.style.background = '#28a745';
+        exitCount++;
+        console.log(`⚠️ Full-screen exited #${exitCount}`);
+        
+        if (exitCount <= 2) {
+            // First 2 times: Show half blank overlay
+            showHalfBlankOverlay();
+        } else {
+            // After 3 times: Show full overlay
+            showFullOverlay();
+        }
+    }
+    
+    // Monitor full-screen status
+    function monitorFullScreen() {
+        if (!examStarted) return;
+        
+        const isFs = isInFullScreen();
+        
+        if (!isFs) {
+            handleFullScreenExit();
+        } else {
+            // If we're in full-screen, hide overlays
+            if (halfOverlay.style.display === 'flex' || fullOverlay.style.display === 'flex') {
+                hideAllOverlays();
+            }
         }
     }
     
     // Listen for full-screen changes
-    document.addEventListener('fullscreenchange', checkFullScreen);
-    document.addEventListener('webkitfullscreenchange', checkFullScreen);
-    document.addEventListener('mozfullscreenchange', checkFullScreen);
-    document.addEventListener('MSFullscreenChange', checkFullScreen);
+    document.addEventListener('fullscreenchange', monitorFullScreen);
+    document.addEventListener('webkitfullscreenchange', monitorFullScreen);
+    document.addEventListener('mozfullscreenchange', monitorFullScreen);
+    document.addEventListener('MSFullscreenChange', monitorFullScreen);
+    
+    // Check every 500ms aggressively
+    let checkInterval = null;
     
     // Prevent Escape key from exiting full-screen
     document.addEventListener('keydown', function(e) {
@@ -358,36 +456,40 @@
             e.preventDefault();
             e.stopPropagation();
             console.log('🔒 Escape key blocked');
+            
+            // Force full-screen back immediately
+            forceFullScreen();
             return false;
+        }
+        
+        // Any key during half overlay - restore immediately
+        if (halfOverlay.style.display === 'flex') {
+            forceFullScreen();
         }
         
         // Block F11
         if (e.key === 'F11') {
             e.preventDefault();
-            e.stopPropagation();
             return false;
         }
         
         // Block Print Screen
         if (e.key === 'PrintScreen') {
             e.preventDefault();
-            e.stopPropagation();
             return false;
         }
         
-        // Block Alt+Tab (can't fully block, but we can detect)
+        // Block Alt+Tab detection
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
-            alert('Alt+Tab is prohibited during exam!');
-            closeExam();
+            forceFullScreen();
             return false;
         }
         
         // Block Windows key
         if (e.key === 'Meta' || e.key === 'Win') {
             e.preventDefault();
-            alert('Windows key is prohibited!');
-            closeExam();
+            forceFullScreen();
             return false;
         }
     });
@@ -398,73 +500,45 @@
         return false;
     });
     
-    // Block developer tools shortcuts
+    // Block developer tools
     document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey && e.shiftKey && e.key === 'I') ||  // Ctrl+Shift+I
-            (e.ctrlKey && e.shiftKey && e.key === 'J') ||  // Ctrl+Shift+J
-            (e.ctrlKey && e.key === 'U') ||                 // Ctrl+U
-            (e.ctrlKey && e.key === 'S') ||                 // Ctrl+S
-            (e.ctrlKey && e.key === 'P') ||                 // Ctrl+P
-            (e.ctrlKey && e.key === 'R') ||                 // Ctrl+R
-            e.key === 'F12') {                              // F12
-            
+        if ((e.ctrlKey && e.shiftKey && e.key === 'I') ||
+            (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+            (e.ctrlKey && e.key === 'U') ||
+            (e.ctrlKey && e.key === 'S') ||
+            e.key === 'F12') {
             e.preventDefault();
-            alert('Developer tools are disabled during exam!');
-            closeExam();
+            forceFullScreen();
             return false;
         }
     });
     
-    // Tab switch detection - close exam immediately
-    let tabSwitchCount = 0;
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden && examStarted) {
-            tabSwitchCount++;
-            console.log(`⚠️ Tab switch #${tabSwitchCount}`);
-            
-            if (tabSwitchCount >= 1) {
-                // Close exam on FIRST tab switch
-                alert('Tab switching is prohibited! Exam closed.');
-                closeExam();
-            }
-        }
-    });
-    
-    // Start exam when user enters full-screen
-    enterBtn.onclick = async () => {
-        await enterFullScreen();
+    // Start exam
+    function startExam() {
         examStarted = true;
         
-        // Start periodic check (every 1 second)
-        if (checkInterval) clearInterval(checkInterval);
-        checkInterval = setInterval(() => {
-            const isFs = !!(document.fullscreenElement || 
-                           document.webkitFullscreenElement);
-            if (!isFs && examStarted) {
-                console.log('⚠️ Full-screen lost!');
-                closeExam();
-            }
-        }, 1000);
+        // Force full-screen first
+        forceFullScreen().then(() => {
+            // Start monitoring
+            if (checkInterval) clearInterval(checkInterval);
+            checkInterval = setInterval(monitorFullScreen, 500);
+        });
+    }
+    
+    // Force button
+    forceBtn.onclick = () => {
+        forceFullScreen();
     };
     
-    // Close exam button
-    closeBtn.onclick = () => {
-        closeExam();
+    // Click anywhere on half overlay to restore
+    halfOverlay.onclick = () => {
+        forceFullScreen();
     };
-    
-    // Block window before unload
-    window.addEventListener('beforeunload', function(e) {
-        if (examStarted) {
-            e.preventDefault();
-            e.returnValue = 'Exam in progress. Are you sure?';
-            return 'Exam in progress. Are you sure?';
-        }
-    });
     
     // Sample exam functions
     document.querySelectorAll('.optBtn').forEach(btn => {
         btn.addEventListener('click', function() {
-            if (!examStarted) return;
+            if (!examStarted) startExam();
             document.querySelectorAll('.optBtn').forEach(b => b.classList.remove('selected'));
             this.classList.add('selected');
         });
@@ -473,7 +547,7 @@
     function submitExam() {
         if (!examStarted) return;
         alert('Exam submitted successfully!');
-        exitFullScreen();
+        if (checkInterval) clearInterval(checkInterval);
         location.reload();
     }
     
@@ -483,12 +557,15 @@
         }
     };
     
-    // Initial state
-    examContent.style.display = 'none';
-    warningDiv.style.display = 'flex';
+    // Auto-start on page load
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            startExam();
+        }, 500);
+    });
     
-    console.log('✅ Security system active');
-    console.log('⚠️ Exam will CLOSE if full-screen is exited');
+    console.log('✅ Force full-screen system active');
+    console.log('⚠️ If full-screen is exited, half blank overlay appears from top');
 </script>
 </body>
 </html>
